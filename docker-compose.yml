@@ -1,0 +1,56 @@
+services:
+  # MongoDB for User Account Management Service
+  user-mongo:
+    image: mongo:latest
+    container_name: user-mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=rootpassword
+    networks:
+      - app-network
+
+  # # MongoDB for Storage Management Service
+  storage-mongo:
+    image: mongo:latest
+    container_name: storage-mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=rootpassword
+    networks:
+      - app-network
+
+  # User Account Management Service (Express app)
+  user-service:
+    build:
+      context: ./user-account-mngmnt
+    container_name: user-service
+    env_file:
+      - ./user-account-mngmnt/.env
+    ports:
+      - "3001:3001"
+    depends_on:
+      - user-mongo
+    volumes:
+      - ./user-account-mngmnt:/app
+    networks:
+      - app-network
+
+  # # Storage Management Service (Express app)
+  storage-service:
+    build:
+      context: ./storage-mngmnt
+    container_name: storage-service
+    env_file:
+      - ./storage-mngmnt/.env
+    ports:
+      - "3002:3002"
+    depends_on:
+      - storage-mongo
+    volumes:
+      - ./storage-mngmnt:/app
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

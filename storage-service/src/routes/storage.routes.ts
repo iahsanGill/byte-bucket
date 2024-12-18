@@ -9,7 +9,9 @@ import {
 import { authenticate } from "../middleware/auth.middleware";
 
 const router = express.Router();
-const upload = multer();
+const upload = multer({
+  limits: { fileSize: 50 * 1024 * 1024 },
+});
 
 // Allocate storage for a new user
 router.get("/allocate", authenticate, async (req, res) => {

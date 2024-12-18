@@ -49,6 +49,7 @@ services:
       - user-mongo
     volumes:
       - ./user-service:/app
+      - ./shared:/shared
     networks:
       - app-network
 
@@ -82,6 +83,19 @@ services:
       - usage-mongo
     volumes:
       - ./usage-monitoring-service:/app
+      - ./shared:/shared
+    networks:
+      - app-network
+
+  # # Logging Service
+  logging-service:
+    build:
+      context: ./logging-service
+    container_name: logging-service
+    env_file:
+      - ./logging-service/.env
+    volumes:
+      - ./logging-service:/app
       - ./shared:/shared
     networks:
       - app-network

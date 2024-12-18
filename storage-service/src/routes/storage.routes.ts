@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import {
   allocateStorage,
+  deleteFile,
   getUserStorageDetails,
   uploadFile,
 } from "../services/storage.service";
@@ -41,8 +42,21 @@ router.post(
   }
 );
 
+// Delete file
+router.delete("/delete", authenticate, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { fileName } = req.body;
+
+    await deleteFile(userId, fileName);
+    res.status(200).json({ message: "File deleted successfully" });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Get user storage details
-router.get("/", authenticate, async (req, res) => {
+router.get("/details", authenticate, async (req, res) => {
   try {
     const { userId } = req.params;
     const details = await getUserStorageDetails(userId);

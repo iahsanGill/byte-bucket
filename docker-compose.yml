@@ -1,4 +1,11 @@
 services:
+  # Redis for caching
+  redis:
+    image: redis:latest
+    container_name: redis
+    networks:
+      - app-network
+
   # MongoDB for User Account Management Service
   user-mongo:
     image: mongo:latest
@@ -19,35 +26,63 @@ services:
     networks:
       - app-network
 
+    # # MongoDB for User Monitoring Service
+  usage-mongo:
+    image: mongo:latest
+    container_name: usage-mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=rootpassword
+    networks:
+      - app-network
+
   # User Account Management Service (Express app)
   user-service:
     build:
-      context: ./user-account-mngmnt
+      context: ./user-service
     container_name: user-service
     env_file:
-      - ./user-account-mngmnt/.env
+      - ./user-service/.env
     ports:
       - "3001:3001"
     depends_on:
       - user-mongo
     volumes:
-      - ./user-account-mngmnt:/app
+      - ./user-service:/app
     networks:
       - app-network
 
   # # Storage Management Service (Express app)
   storage-service:
     build:
-      context: ./storage-mngmnt
+      context: ./storage-service
     container_name: storage-service
     env_file:
-      - ./storage-mngmnt/.env
+      - ./storage-service/.env
     ports:
       - "3002:3002"
     depends_on:
       - storage-mongo
     volumes:
-      - ./storage-mngmnt:/app
+      - ./storage-service:/app
+      - ./shared:/shared
+    networks:
+      - app-network
+
+  # # User Monitoring Service (Express app)
+  usage-monitoring-service:
+    build:
+      context: ./usage-monitoring-service
+    container_name: usage-monitoring-service
+    env_file:
+      - ./usage-monitoring-service/.env
+    ports:
+      - "3003:3003"
+    depends_on:
+      - usage-mongo
+    volumes:
+      - ./usage-monitoring-service:/app
+      - ./shared:/shared
     networks:
       - app-network
 

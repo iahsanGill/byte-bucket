@@ -1,5 +1,15 @@
 import { createLogger, format, transports } from "winston";
 import { subscriber } from "../../shared/redis.util";
+import * as path from "path";
+
+// Get today's date in YYYY-MM-DD format
+const getDate = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 // Create the logger instance
 const logger = createLogger({
@@ -7,7 +17,7 @@ const logger = createLogger({
   format: format.combine(format.timestamp(), format.json()),
   transports: [
     new transports.File({
-      filename: "logs/app.log", // Logs will be saved here
+      filename: path.join("logs", `app-${getDate()}.log`), // Logs will be saved here
       maxsize: 5 * 1024 * 1024, // Rotate files > 5 MB
       maxFiles: 5, // Keep the last 5 rotated files
     }),

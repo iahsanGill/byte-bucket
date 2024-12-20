@@ -14,8 +14,8 @@ RUN pnpm install
 # Copy source code
 COPY . .
 
-# Expose the app on port 3001
-EXPOSE 3001
+# Expose the app on port 8080
+EXPOSE 8080
 
 # Run the app
 CMD ["pnpm", "start:dev"]

@@ -44,7 +44,7 @@ services:
     env_file:
       - ./user-service/.env
     ports:
-      - "3001:3001"
+      - "3001:8080"
     depends_on:
       - user-mongo
     volumes:
@@ -61,7 +61,7 @@ services:
     env_file:
       - ./storage-service/.env
     ports:
-      - "3002:3002"
+      - "3002:8080"
     depends_on:
       - storage-mongo
     volumes:
@@ -77,8 +77,6 @@ services:
     container_name: usage-monitoring-service
     env_file:
       - ./usage-monitoring-service/.env
-    ports:
-      - "3003:3003"
     depends_on:
       - usage-mongo
     volumes:
@@ -97,6 +95,18 @@ services:
     volumes:
       - ./logging-service:/app
       - ./shared:/shared
+    networks:
+      - app-network
+
+  # # View generator Service
+  view-generator-service:
+    build:
+      context: ./view-generator-service
+    container_name: view-generator-service
+    volumes:
+      - ./view-generator-service:/app
+    ports:
+      - "3000:3000"
     networks:
       - app-network
 

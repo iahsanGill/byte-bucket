@@ -18,10 +18,10 @@ subscriber.on("message", async (channel, message) => {
   }
 });
 
-subscriber.subscribe("file-channel", (err) => {
+subscriber.subscribe("file-channel", (err, count) => {
   if (err) {
-    console.error("Error subscribing to file channel:", err);
+    console.error("Failed to subscribe to file-channel:", err);
   } else {
-    console.log(`Subscribed to file channel. Listening for updates...`);
+    console.log(`Subscribed to file-channel (${count} total subscriptions).`);
   }
 });

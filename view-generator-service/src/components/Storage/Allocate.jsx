@@ -9,7 +9,7 @@ function Allocate({ token }) {
     const allocateStorage = async () => {
       try {
         const response = await axios.get(
-          "http://storage-service:8080/api/storage/allocate",
+          "http://localhost:8080/api/storage/allocate",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -29,6 +29,7 @@ function Allocate({ token }) {
       <h2>Storage Allocation</h2>
       {error && <p style={{ color: "red" }}>{error}</p>}
       <p>Allocated Storage: {storageAllocated} GB</p>
+      <p>Please proceed to <a href="/storage/upload">upload your video</a>.</p>
     </div>
   );
 }

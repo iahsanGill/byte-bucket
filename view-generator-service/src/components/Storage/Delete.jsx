@@ -18,7 +18,7 @@ function Delete({ token }) {
 
     try {
       const response = await axios.post(
-        "http://storage-service:8080/api/storage/delete",
+        "http://localhost:8080/api/storage/delete",
         { fileName },
         { headers: { Authorization: `Bearer ${token}` } }
       );

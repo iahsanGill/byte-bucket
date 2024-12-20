@@ -14,7 +14,7 @@ function Register() {
     setError("");
 
     try {
-      await axios.post("http://user-service:8080/api/users/register", {
+      await axios.post("http://localhost:8080/api/users/register", {
         username,
         email,
         password,

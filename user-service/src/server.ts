@@ -27,9 +27,9 @@ app.use(cors());
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use("/api/users", userRoutes);
+app.use("/api", userRoutes);
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`User Account Management Service running on port ${PORT}`);
 });

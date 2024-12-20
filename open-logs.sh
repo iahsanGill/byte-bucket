@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # List of services
-containers=("user-service" "storage-service" "usage-monitoring-service" "logging-service" "view-generator-service")
+containers=("user-service" "storage-service" "usage-monitoring-service" "logging-service" "view-generator-service" "api-gateway")
 
 # Start a new tmux session
 tmux new-session -d -s logs

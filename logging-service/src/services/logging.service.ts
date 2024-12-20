@@ -1,5 +1,5 @@
 import { createLogger, format, transports } from "winston";
-import { subscriber } from "../../shared/redis.util";
+import { subscriber } from "../../../shared/redis.util";
 import * as path from "path";
 
 // Get today's date in YYYY-MM-DD format

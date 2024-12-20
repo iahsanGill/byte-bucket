@@ -25,7 +25,7 @@ function Upload({ token }) {
 
     try {
       const response = await axios.post(
-        "http://storage-service:8080/api/storage/upload",
+        "http://localhost:8080/api/storage/upload",
         formData,
         {
           headers: {

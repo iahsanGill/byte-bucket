@@ -7,13 +7,13 @@ import storageRoutes from "./routes/storage.routes";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 8080;
 
 app.use(cors());
 app.use(express.json());
-app.use("/api/storage", storageRoutes);
+app.use("/api", storageRoutes);
 
-connectDB(process.env.DB_URL);
+connectDB(process.env.DB_URL as string);
 
 app.listen(PORT, () => {
   console.log(`User Storage Management Service running on port ${PORT}`);

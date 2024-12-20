@@ -14,15 +14,16 @@ function Login({ onLogin }) {
 
     try {
       const response = await axios.post(
-        "http://user-service:8080/api/users/login",
+        "http://localhost:8080/api/users/login",
         {
           email,
           password,
         }
       );
 
-      // Save token and redirect
-      onLogin(response.data.token);
+      // Extract token from response headers
+      const token = response.headers['authorization'];
+      onLogin(token);
       navigate("/storage/allocate");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");

@@ -1,22 +1,16 @@
-import React, { useState } from "react";
-import axios from "axios";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-function Upload({ token }) {
+const Upload = () => {
+  const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
+  const [uploading, setUploading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-
     if (!file) {
-      setError("Please select a file");
+      setError("Please select a video file");
       return;
     }
 
@@ -24,40 +18,50 @@ function Upload({ token }) {
     formData.append("file", file);
 
     try {
-      const response = await axios.post(
-        "http://localhost:8080/api/storage/upload",
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      setUploading(true);
+      const response = await fetch("http://localhost:8080/api/storage/upload", {
+        method: "POST",
+        headers: {
+          Authorization: localStorage.getItem("token"),
+        },
+        body: formData,
+      });
 
-      setSuccess(response.data.message);
-      setFile(null);
-      // Reset file input
-      e.target.reset();
+      if (!response.ok) throw new Error("Upload failed");
+
+      navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "File upload failed");
+      setError(err.message);
+    } finally {
+      setUploading(false);
     }
   };
 
   return (
-    <div>
-      <h2>Upload File</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {success && <p style={{ color: "green" }}>{success}</p>}
-      <form onSubmit={handleSubmit}>
+    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
+      <h2 className="text-2xl font-bold text-center mb-6">Upload Video</h2>
+      {error && <div className="text-red-500 text-center mb-4">{error}</div>}
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label>Select File:</label>
-          <input type="file" onChange={handleFileChange} required />
+          <label className="block text-gray-700 mb-2">Select Video</label>
+          <input
+            type="file"
+            accept="video/*"
+            onChange={(e) => setFile(e.target.files[0])}
+            className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
         </div>
-        <button type="submit">Upload</button>
+        <button
+          type="submit"
+          disabled={uploading}
+          className="w-full bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition duration-200 disabled:bg-gray-400"
+        >
+          {uploading ? "Uploading..." : "Upload"}
+        </button>
       </form>
     </div>
   );
-}
+};
 
 export default Upload;

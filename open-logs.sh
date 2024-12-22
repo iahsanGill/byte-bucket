@@ -4,7 +4,7 @@
 containers=("user-service" "storage-service" "usage-monitoring-service" "logging-service" "view-generator-service" "api-gateway")
 
 # Start a new tmux session
-tmux new-session -d -s logs
+tmux new-session -d -s byte-bucket
 
 # Create a pane for each service and tail the logs
 for i in "${!containers[@]}"; do
@@ -19,4 +19,4 @@ for i in "${!containers[@]}"; do
 done
 
 # Attach to the tmux session
-tmux attach-session -t logs
+tmux attach-session -t byte-bucket

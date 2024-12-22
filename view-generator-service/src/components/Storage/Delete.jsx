@@ -1,55 +1,55 @@
-import React, { useState } from "react";
-import axios from "axios";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-function Delete({ token }) {
+const Delete = () => {
+  const navigate = useNavigate();
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-
-    if (!fileName) {
-      setError("Please enter a filename");
-      return;
-    }
-
     try {
-      const response = await axios.post(
-        "http://localhost:8080/api/storage/delete",
-        { fileName },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await fetch("http://localhost:8080/api/storage/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: localStorage.getItem("token"),
+        },
+        body: JSON.stringify({ fileName }),
+      });
 
-      setSuccess(response.data.message);
-      setFileName("");
+      if (!response.ok) throw new Error("Delete failed");
+
+      navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "File deletion failed");
+      setError(err.message);
     }
   };
 
   return (
-    <div>
-      <h2>Delete File</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {success && <p style={{ color: "green" }}>{success}</p>}
-      <form onSubmit={handleSubmit}>
+    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
+      <h2 className="text-2xl font-bold text-center mb-6">Delete Video</h2>
+      {error && <div className="text-red-500 text-center mb-4">{error}</div>}
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label>Filename:</label>
+          <label className="block text-gray-700 mb-2">File Name</label>
           <input
             type="text"
             value={fileName}
             onChange={(e) => setFileName(e.target.value)}
+            className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
             required
-            placeholder="Enter filename to delete"
           />
         </div>
-        <button type="submit">Delete File</button>
+        <button
+          type="submit"
+          className="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition duration-200"
+        >
+          Delete
+        </button>
       </form>
     </div>
   );
-}
+};
 
 export default Delete;

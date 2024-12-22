@@ -1,94 +1,60 @@
-import React, { useState } from "react";
 import {
   BrowserRouter as Router,
-  Route,
   Routes,
+  Route,
   Navigate,
 } from "react-router-dom";
+import { useState, useEffect } from "react";
 import Login from "./components/Auth/Login";
 import Register from "./components/Auth/Register";
-import Allocate from "./components/Storage/Allocate";
 import Upload from "./components/Storage/Upload";
 import Delete from "./components/Storage/Delete";
+import Allocate from "./components/Storage/Allocate";
+import Welcome from "./components/Welcome";
+import Navbar from "./components/Navbar";
 
-function App() {
-  const [token, setToken] = useState(localStorage.getItem("token"));
+const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const handleLogin = (newToken) => {
-    setToken(newToken);
-    localStorage.setItem("token", newToken);
-  };
-
-  const handleLogout = () => {
-    setToken(null);
-    localStorage.removeItem("token");
-  };
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    setIsAuthenticated(!!token);
+  }, []);
 
   return (
     <Router>
-      <div className="App">
-        <Routes>
-          <Route
-            path="/login"
-            element={
-              !token ? (
-                <Login onLogin={handleLogin} />
-              ) : (
-                <Navigate to="/storage/allocate" />
-              )
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              !token ? <Register /> : <Navigate to="/storage/allocate" />
-            }
-          />
-
-          {token ? (
-            <>
-              <Route
-                path="/storage/allocate"
-                element={<Allocate token={token} />}
-              />
-              <Route
-                path="/storage/upload"
-                element={<Upload token={token} />}
-              />
-              <Route
-                path="/storage/delete"
-                element={<Delete token={token} />}
-              />
-              <Route
-                path="/"
-                element={
-                  <div>
-                    <h1>Storage Service</h1>
-                    <button onClick={handleLogout}>Logout</button>
-                    <nav>
-                      <ul>
-                        <li>
-                          <a href="/storage/allocate">Allocate Storage</a>
-                        </li>
-                        <li>
-                          <a href="/storage/upload">Upload File</a>
-                        </li>
-                        <li>
-                          <a href="/storage/delete">Delete File</a>
-                        </li>
-                      </ul>
-                    </nav>
-                  </div>
-                }
-              />
-            </>
-          ) : (
-            <Route path="*" element={<Navigate to="/login" />} />
-          )}
-        </Routes>
+      <div className="min-h-screen bg-gray-100">
+        <Navbar
+          isAuthenticated={isAuthenticated}
+          setIsAuthenticated={setIsAuthenticated}
+        />
+        <div className="container mx-auto px-4 py-8">
+          <Routes>
+            <Route path="/" element={<Welcome />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="/login"
+              element={<Login setIsAuthenticated={setIsAuthenticated} />}
+            />
+            <Route
+              path="/upload"
+              element={isAuthenticated ? <Upload /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/delete"
+              element={isAuthenticated ? <Delete /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/allocate"
+              element={
+                isAuthenticated ? <Allocate /> : <Navigate to="/login" />
+              }
+            />
+          </Routes>
+        </div>
       </div>
     </Router>
   );
-}
+};
 
 export default App;

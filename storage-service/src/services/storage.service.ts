@@ -1,17 +1,9 @@
 import { redis, subscriber } from "../../../shared/redis.util";
 import { UserStorage } from "../models/user-storage.model";
 import { bucket } from "../utils/gcp.util";
+import logEvent from "../utils/log.util";
 
 const DAILY_BANDWIDTH_LIMIT = 100 * 1024 * 1024; // 100MB
-
-const logEvent = (
-  level: string,
-  message: string,
-  meta: Record<string, any> = {}
-) => {
-  const log = JSON.stringify({ level, message, meta });
-  redis.publish("logging-channel", log);
-};
 
 // Allocate storage for a new user
 export const allocateStorage = async (userId: string) => {
@@ -24,6 +16,15 @@ export const allocateStorage = async (userId: string) => {
   const newStorage = new UserStorage({ userId });
   await newStorage.save();
   logEvent("info", "Storage allocated", { userId });
+};
+
+export const getAllVideos = async () => {
+  const [files] = await bucket.getFiles();
+  const videos = files
+    .filter((file) => file.name.endsWith(".mp4"))
+    .map((file) => file.name);
+
+  return videos;
 };
 
 // Upload file

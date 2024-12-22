@@ -3,6 +3,7 @@ import multer from "multer";
 import {
   allocateStorage,
   deleteFile,
+  getAllVideos,
   getUserStorageDetails,
   uploadFile,
 } from "../services/storage.service";
@@ -11,6 +12,11 @@ import { authenticate } from "../middleware/auth.middleware";
 const router = express.Router();
 const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 },
+});
+
+router.get("/", async (req, res) => {
+  const videos = await getAllVideos();
+  res.status(200).json({ videos });
 });
 
 // Allocate storage for a new user

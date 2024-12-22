@@ -1,16 +1,7 @@
 import * as argon2 from "argon2";
 import { User } from "../models/user.model";
 import { generateToken } from "../utils/jwt.util";
-import { subscriber } from "../../../shared/redis.util";
-
-const logEvent = (
-  level: string,
-  message: string,
-  meta: Record<string, any> = {}
-) => {
-  const log = JSON.stringify({ level, message, meta });
-  subscriber.publish("logging-channel", log);
-};
+import logEvent from "../utils/log.util";
 
 export const registerUser = async (
   username: string,

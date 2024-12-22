@@ -1,18 +1,9 @@
 import axios from "axios";
 import { Request, Response, NextFunction } from "express";
-import { subscriber } from "../../../shared/redis.util";
+import logEvent from "../utils/log.util";
 
 // URL of the User Service validate endpoint
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL;
-
-const logEvent = (
-  level: string,
-  message: string,
-  meta: Record<string, any> = {}
-) => {
-  const log = JSON.stringify({ level, message, meta });
-  subscriber.publish("logging-channel", log);
-};
 
 export const authenticate = async (
   req: Request,
@@ -28,14 +19,21 @@ export const authenticate = async (
         ip: req.ip,
       });
       res.status(401).json({ error: "Unauthorized: No token provided" });
+      return;
     }
 
     const token = authHeader.split(" ")[1];
+    console.log("token", token);
 
     // Validate the token by calling the User Service
-    const response = await axios.get(`${USER_SERVICE_URL}/validate`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    let response;
+    try {
+      response = await axios.get(`${USER_SERVICE_URL}/validate`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (error) {
+      throw new Error(`Failed to call User Service: ${error.message}`);
+    }
 
     // Extract user ID from the response
     const { userId } = response.data;
@@ -45,6 +43,7 @@ export const authenticate = async (
         ip: req.ip,
       });
       res.status(401).json({ error: "Unauthorized: Invalid token" });
+      return;
     }
 
     // Attach user ID to the request object
@@ -61,5 +60,6 @@ export const authenticate = async (
       ip: req.ip,
     });
     res.status(401).json({ error: "Unauthorized: Invalid token" });
+    return;
   }
 };

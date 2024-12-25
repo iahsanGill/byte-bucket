@@ -1,26 +1,49 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import multer from "multer";
 import {
   allocateStorage,
   deleteFile,
-  getAllVideos,
   getUserStorageDetails,
   uploadFile,
+  getAllThumbnails,
+  getVideoByThumbnail,
 } from "../services/storage.service";
 import { authenticate } from "../middleware/auth.middleware";
+
+interface MulterRequest extends Request {
+  files: {
+    [key: string]: Express.Multer.File[];
+  };
+}
 
 const router = express.Router();
 const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 
-router.get("/", async (req, res) => {
-  const videos = await getAllVideos();
-  res.status(200).json({ videos });
+// Get the signed urls for all thumbnails
+router.get("/thumbnails", async (req: Request, res: Response) => {
+  const thumbnails = await getAllThumbnails();
+  res.status(200).json({ thumbnails });
 });
 
+// Stream video by thumbnail name
+router.get(
+  "/video/:thumbnailName(*).jpg",
+  async (req: Request, res: Response) => {
+    try {
+      const { thumbnailName } = req.params;
+      const videoStream = await getVideoByThumbnail(thumbnailName);
+
+      videoStream.pipe(res);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
 // Allocate storage for a new user
-router.get("/allocate", authenticate, async (req, res) => {
+router.get("/allocate", authenticate, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     await allocateStorage(userId);
@@ -30,20 +53,30 @@ router.get("/allocate", authenticate, async (req, res) => {
   }
 });
 
-// Upload file
+// Upload file and thumbnail
 router.post(
   "/upload",
-  upload.single("file"),
+  upload.fields([
+    { name: "video", maxCount: 1 },
+    { name: "thumbnail", maxCount: 1 },
+  ]),
   authenticate,
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
-      const file = req.file;
+      console.log(req.files);
 
-      if (!file) throw new Error("No file uploaded");
+      const request = req as MulterRequest;
+      const file = request.files["video"][0];
+      const thumbnail = request.files["thumbnail"][0];
 
-      await uploadFile(userId, file);
-      res.status(200).json({ message: "File uploaded successfully" });
+      if (!file || !thumbnail)
+        throw new Error("File or thumbnail not uploaded");
+
+      await uploadFile(userId, file, thumbnail);
+      res
+        .status(200)
+        .json({ message: "File and thumbnail uploaded successfully" });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -51,7 +84,7 @@ router.post(
 );
 
 // Delete file
-router.delete("/delete", authenticate, async (req, res) => {
+router.delete("/delete", authenticate, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     const { fileName } = req.body;
@@ -64,7 +97,7 @@ router.delete("/delete", authenticate, async (req, res) => {
 });
 
 // Get user storage details
-router.get("/details", authenticate, async (req, res) => {
+router.get("/details", authenticate, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     const details = await getUserStorageDetails(userId);

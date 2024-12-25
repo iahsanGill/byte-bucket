@@ -1,4 +1,6 @@
-import { subscriber } from "../../../shared/redis.util";
+import Redis from "ioredis";
+
+export const subscriber = new Redis(process.env.REDIS_URL);
 
 const logEvent = (
   level: string,

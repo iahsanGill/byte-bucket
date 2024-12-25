@@ -1,5 +1,8 @@
-import { redis, subscriber } from "../../../shared/redis.util";
+import Redis from "ioredis";
 import { Usage } from "../models/usage.model";
+
+const redis = new Redis(process.env.REDIS_URL);
+const subscriber = new Redis(process.env.REDIS_URL);
 
 subscriber.on("message", async (channel, message) => {
   try {

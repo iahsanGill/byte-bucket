@@ -1,11 +1,38 @@
-import { redis, subscriber } from "../../../shared/redis.util";
-import { UserStorage } from "../models/user-storage.model";
 import { bucket } from "../utils/gcp.util";
 import logEvent from "../utils/log.util";
+import { UserStorage } from "../models/user-storage.model";
+import { v4 as uuidv4 } from "uuid";
+import Redis from "ioredis";
 
 const DAILY_BANDWIDTH_LIMIT = 100 * 1024 * 1024; // 100MB
 
-// Allocate storage for a new user
+const redis = new Redis(process.env.REDIS_URL);
+
+export const checkStorageLimit = async (userId: string, fileSize: number) => {
+  const userStorage = await UserStorage.findOne({ userId });
+  if (!userStorage) {
+    logEvent("error", "User storage not found", { userId });
+    throw new Error("User storage not found");
+  }
+
+  if (userStorage.usedStorage + fileSize > userStorage.totalStorage) {
+    logEvent("error", "Storage limit reached", { userId, fileSize });
+    throw new Error("Storage limit reached");
+  }
+
+  return userStorage;
+};
+
+export const checkBandwidthLimit = async (userId: string, fileSize: number) => {
+  const cachedUsage = await redis.get(`usage:${userId}`);
+  const currentUsage = cachedUsage ? parseInt(cachedUsage) : 0;
+
+  if (currentUsage + fileSize > DAILY_BANDWIDTH_LIMIT) {
+    logEvent("error", "Bandwidth limit exceeded", { userId, fileSize });
+    throw new Error("Bandwidth limit exceeded.");
+  }
+};
+
 export const allocateStorage = async (userId: string) => {
   const existingStorage = await UserStorage.findOne({ userId });
   if (existingStorage) {
@@ -18,91 +45,99 @@ export const allocateStorage = async (userId: string) => {
   logEvent("info", "Storage allocated", { userId });
 };
 
-export const getAllVideos = async () => {
-  const [files] = await bucket.getFiles();
-  const videos = files
-    .filter((file) => file.name.endsWith(".mp4"))
-    .map((file) => file.name);
+export const uploadFile = async (
+  userId: string,
+  video: Express.Multer.File,
+  thumbnail: Express.Multer.File
+) => {
+  const videoExt = video.originalname.split(".").pop();
+  const uniqueVideoName = uuidv4();
+  const thumbnailExt = thumbnail.originalname.split(".").pop();
+  const uniqueThumbnailName = `${uniqueVideoName}-thumbnail`;
 
-  return videos;
+  const fileBlob = bucket.file(`${userId}/${uniqueVideoName}.${videoExt}`);
+  const thumbnailBlob = bucket.file(
+    `${userId}/${uniqueThumbnailName}.${thumbnailExt}`
+  );
+
+  const fileBlobStream = fileBlob.createWriteStream();
+  const thumbnailBlobStream = thumbnailBlob.createWriteStream();
+
+  fileBlobStream.end(video.buffer);
+  thumbnailBlobStream.end(thumbnail.buffer);
+
+  await Promise.all([
+    new Promise((resolve, reject) => {
+      fileBlobStream.on("finish", resolve);
+      fileBlobStream.on("error", reject);
+    }),
+    new Promise((resolve, reject) => {
+      thumbnailBlobStream.on("finish", resolve);
+      thumbnailBlobStream.on("error", reject);
+    }),
+  ]);
+
+  logEvent("info", "File uploaded", { userId, fileName: uniqueVideoName });
 };
 
-// Upload file
-export const uploadFile = async (userId: string, file: Express.Multer.File) => {
-  const userStorage = await UserStorage.findOne({ userId });
-  if (!userStorage) {
-    logEvent("error", "User storage not found", { userId });
-    throw new Error("User storage not found");
-  }
-
-  const fileSize = file.size;
-
-  if (userStorage.usedStorage + fileSize > userStorage.totalStorage) {
-    logEvent("error", "Storage limit reached", { userId, fileSize });
-    throw new Error("Storage limit reached");
-  }
-
-  // Check Redis Cache for Bandwidth Usage
-  const cachedUsage = await redis.get(`usage:${userId}`);
-  const currentUsage = cachedUsage ? parseInt(cachedUsage) : 0;
-
-  if (currentUsage + fileSize > DAILY_BANDWIDTH_LIMIT) {
-    logEvent("error", "Bandwidth limit exceeded", { userId, fileSize });
-    throw new Error("Bandwidth limit exceeded.");
-  }
-
-  // Upload file to GCP bucket
-  const blob = bucket.file(`${userId}/${file.originalname}`);
-  const blobStream = blob.createWriteStream();
-
-  blobStream.end(file.buffer);
-  await new Promise((resolve, reject) => {
-    blobStream.on("finish", resolve);
-    blobStream.on("error", reject);
-  });
-
-  // Update storage usage
-  userStorage.usedStorage += fileSize;
-  await userStorage.save();
-
-  subscriber.publish("file-channel", JSON.stringify({ userId, fileSize }));
-  logEvent("info", "File uploaded", { userId, fileSize });
-};
-
-// Delete file
 export const deleteFile = async (userId: string, fileName: string) => {
-  const userStorage = await UserStorage.findOne({ userId });
-  if (!userStorage) {
-    logEvent("error", "User storage not found", { userId });
-    throw new Error("User storage not found");
-  }
-
-  // Check if file exists in GCP bucket
   const file = bucket.file(`${userId}/${fileName}`);
-  const [exists] = await file.exists();
-  if (!exists) {
+  const thumbnail = bucket.file(`${userId}/${fileName}-thumbnail`);
+  const [fileExists] = await file.exists();
+  const [thumbnailExists] = await thumbnail.exists();
+
+  if (!fileExists) {
     logEvent("error", "File not found", { userId, fileName });
     throw new Error("File not found");
   }
 
-  // Get file size
-  const [metadata] = await file.getMetadata();
-  const fileSize = metadata.size as number;
+  if (!thumbnailExists) {
+    logEvent("error", "Thumbnail not found", { userId, fileName });
+    throw new Error("Thumbnail not found");
+  }
 
-  // Delete file from GCP bucket
-  await file.delete();
+  const [fileMetadata] = await file.getMetadata();
+  const fileSize = fileMetadata.size as number;
 
-  // Update storage usage
-  userStorage.usedStorage -= fileSize;
-  await userStorage.save();
+  await Promise.all([file.delete(), thumbnail.delete()]);
 
-  subscriber.publish("file-channel", JSON.stringify({ userId, fileSize }));
-  logEvent("info", "File deleted", { userId, fileName, fileSize });
-
-  console.log("File deleted event published");
+  logEvent("info", "File deleted", { userId, fileName });
+  return fileSize;
 };
 
-// Fetch user storage details
+export const getAllThumbnails = async () => {
+  const [files] = await bucket.getFiles();
+  const thumbnails = await Promise.all(
+    files
+      .filter((file) => file.name.endsWith("-thumbnail.jpg"))
+      .map(async (file) => {
+        const [url] = await file.getSignedUrl({
+          action: "read",
+          expires: Date.now() + 1000 * 60 * 60, // 1 hour
+        });
+        return { name: file.name, url };
+      })
+  );
+
+  logEvent("info", "Fetched all thumbnails", { count: thumbnails.length });
+  return thumbnails;
+};
+
+export const getVideoByThumbnail = async (thumbnailName: string) => {
+  const videoName = thumbnailName.replace("-thumbnail", ".mp4");
+  console.log("videoName", videoName);
+
+  const videoFile = bucket.file(videoName);
+
+  const [exists] = await videoFile.exists();
+  if (!exists) {
+    logEvent("error", "Video not found", { thumbnailName });
+    throw new Error("Video not found");
+  }
+
+  return videoFile.createReadStream();
+};
+
 export const getUserStorageDetails = async (userId: string) => {
   const userStorage = await UserStorage.findOne({ userId });
   if (!userStorage) {

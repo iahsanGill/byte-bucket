@@ -16,6 +16,7 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
+    "ioredis": "^5.4.2",
     "winston": "^3.17.0"
   }
 }

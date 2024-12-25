@@ -1,6 +1,8 @@
 import { createLogger, format, transports } from "winston";
-import { subscriber } from "../../../shared/redis.util";
+import Redis from "ioredis";
 import * as path from "path";
+
+export const subscriber = new Redis(process.env.REDIS_URL);
 
 // Get today's date in YYYY-MM-DD format
 const getDate = () => {

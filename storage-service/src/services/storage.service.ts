@@ -1,4 +1,4 @@
-import { bucket } from "../utils/gcp.util";
+import { videosBucket, thumbnailsBucket } from "../utils/gcp.util";
 import logEvent from "../utils/log.util";
 import { UserStorage } from "../models/user-storage.model";
 import { v4 as uuidv4 } from "uuid";
@@ -51,13 +51,12 @@ export const uploadFile = async (
   thumbnail: Express.Multer.File
 ) => {
   const videoExt = video.originalname.split(".").pop();
-  const uniqueVideoName = uuidv4();
   const thumbnailExt = thumbnail.originalname.split(".").pop();
-  const uniqueThumbnailName = `${uniqueVideoName}-thumbnail`;
+  const videoId = uuidv4();
 
-  const fileBlob = bucket.file(`${userId}/${uniqueVideoName}.${videoExt}`);
-  const thumbnailBlob = bucket.file(
-    `${userId}/${uniqueThumbnailName}.${thumbnailExt}`
+  const fileBlob = videosBucket.file(`${videoId}.${videoExt}`);
+  const thumbnailBlob = thumbnailsBucket.file(
+    `${videoId}-thumbnail.${thumbnailExt}`
   );
 
   const fileBlobStream = fileBlob.createWriteStream();
@@ -77,61 +76,70 @@ export const uploadFile = async (
     }),
   ]);
 
-  logEvent("info", "File uploaded", { userId, fileName: uniqueVideoName });
+  logEvent("info", "Files uploaded", { userId });
 };
 
-export const deleteFile = async (userId: string, fileName: string) => {
-  const file = bucket.file(`${userId}/${fileName}`);
-  const thumbnail = bucket.file(`${userId}/${fileName}-thumbnail`);
+export const deleteFile = async (userId: string, videoId: string) => {
+  const file = videosBucket.file(`${videoId}.mp4`);
   const [fileExists] = await file.exists();
-  const [thumbnailExists] = await thumbnail.exists();
 
   if (!fileExists) {
-    logEvent("error", "File not found", { userId, fileName });
+    logEvent("error", "File not found", { userId, videoId });
     throw new Error("File not found");
   }
 
-  if (!thumbnailExists) {
-    logEvent("error", "Thumbnail not found", { userId, fileName });
+  // Regular expression for common image extensions
+  const thumbnailPrefix = `${videoId}-thumbnail`;
+  const thumbnailExtensions = /\.(jpg|jpeg|png|gif)$/i;
+
+  // List all files in the thumbnails bucket
+  const [thumbnails] = await thumbnailsBucket.getFiles({
+    prefix: thumbnailPrefix,
+  });
+
+  // Find the thumbnail with the correct extension
+  const thumbnailFile = thumbnails.find((file) =>
+    thumbnailExtensions.test(file.name)
+  );
+
+  if (!thumbnailFile) {
+    logEvent("error", "Thumbnail not found", { userId, videoId });
     throw new Error("Thumbnail not found");
   }
 
+  // Get the size of the original file
   const [fileMetadata] = await file.getMetadata();
   const fileSize = fileMetadata.size as number;
 
-  await Promise.all([file.delete(), thumbnail.delete()]);
+  // Delete the video file and thumbnail
+  await Promise.all([file.delete(), thumbnailFile.delete()]);
 
-  logEvent("info", "File deleted", { userId, fileName });
+  logEvent("info", "File and thumbnail deleted", { userId, videoId });
   return fileSize;
 };
 
 export const getAllThumbnails = async () => {
-  const [files] = await bucket.getFiles();
+  const [files] = await thumbnailsBucket.getFiles();
   const thumbnails = await Promise.all(
-    files
-      .filter((file) => file.name.endsWith("-thumbnail.jpg"))
-      .map(async (file) => {
-        const [url] = await file.getSignedUrl({
-          action: "read",
-          expires: Date.now() + 1000 * 60 * 60, // 1 hour
-        });
-        return { name: file.name, url };
-      })
+    files.map(async (file) => {
+      const [url] = await file.getSignedUrl({
+        action: "read",
+        expires: Date.now() + 1000 * 60 * 60, // 1 hour
+      });
+      return { name: file.name, url };
+    })
   );
 
   logEvent("info", "Fetched all thumbnails", { count: thumbnails.length });
   return thumbnails;
 };
 
-export const getVideoByThumbnail = async (thumbnailName: string) => {
-  const videoName = thumbnailName.replace("-thumbnail", ".mp4");
-  console.log("videoName", videoName);
-
-  const videoFile = bucket.file(videoName);
+export const getVideoById = async (videoId: string) => {
+  const videoFile = videosBucket.file(`${videoId}.mp4`);
 
   const [exists] = await videoFile.exists();
   if (!exists) {
-    logEvent("error", "Video not found", { thumbnailName });
+    logEvent("error", "Video not found", { videoId });
     throw new Error("Video not found");
   }
 

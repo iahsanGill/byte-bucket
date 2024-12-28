@@ -6,7 +6,7 @@ import {
   getUserStorageDetails,
   uploadFile,
   getAllThumbnails,
-  getVideoByThumbnail,
+  getVideoById,
 } from "../services/storage.service";
 import { authenticate } from "../middleware/auth.middleware";
 
@@ -28,19 +28,17 @@ router.get("/thumbnails", async (req: Request, res: Response) => {
 });
 
 // Stream video by thumbnail name
-router.get(
-  "/video/:thumbnailName(*).jpg",
-  async (req: Request, res: Response) => {
-    try {
-      const { thumbnailName } = req.params;
-      const videoStream = await getVideoByThumbnail(thumbnailName);
+router.get("/video/:videoId", async (req: Request, res: Response) => {
+  try {
+    const { videoId } = req.params;
 
-      videoStream.pipe(res);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
+    const videoStream = await getVideoById(videoId);
+
+    videoStream.pipe(res);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
-);
+});
 
 // Allocate storage for a new user
 router.get("/allocate", authenticate, async (req: Request, res: Response) => {
@@ -84,17 +82,21 @@ router.post(
 );
 
 // Delete file
-router.delete("/delete", authenticate, async (req: Request, res: Response) => {
-  try {
-    const { userId } = req.params;
-    const { fileName } = req.body;
+router.delete(
+  "/delete/:videoId",
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { videoId } = req.params;
 
-    await deleteFile(userId, fileName);
-    res.status(200).json({ message: "File deleted successfully" });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+      await deleteFile(userId, videoId);
+      res.status(200).json({ message: "File deleted successfully" });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
   }
-});
+);
 
 // Get user storage details
 router.get("/details", authenticate, async (req: Request, res: Response) => {

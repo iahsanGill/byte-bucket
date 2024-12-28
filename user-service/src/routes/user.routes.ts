@@ -24,7 +24,7 @@ router.post("/login", async (req: Request, res: Response) => {
     const token = await loginUser(email, password);
     if (token) {
       res
-        .setHeader("Authorization", `Bearer ${token}`)
+        .cookie("token", token, { httpOnly: true, secure: true })
         .status(200)
         .json({ message: "Login successful" });
     } else {
@@ -36,7 +36,7 @@ router.post("/login", async (req: Request, res: Response) => {
 });
 
 router.get("/validate", (req: Request, res: Response) => {
-  const token = req.headers.authorization?.split(" ")[1];
+  const token = req.cookies.token;
   try {
     if (token) {
       const user = verifyToken(token);

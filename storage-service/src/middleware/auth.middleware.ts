@@ -11,10 +11,10 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-    // Extract the token from the Authorization header
-    const authHeader = req.headers.authorization;
+    // Extract the token from the cookies
+    const token = req.cookies.token;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!token) {
       logEvent("warn", "Unauthorized access attempt: No token provided", {
         ip: req.ip,
       });
@@ -22,14 +22,12 @@ export const authenticate = async (
       return;
     }
 
-    const token = authHeader.split(" ")[1];
-    console.log("token", token);
-
     // Validate the token by calling the User Service
     let response;
     try {
       response = await axios.get(`${USER_SERVICE_URL}/validate`, {
-        headers: { Authorization: `Bearer ${token}` },
+        // Pass the token as a cookie
+        headers: { Cookie: `token=${token}` },
       });
     } catch (error) {
       throw new Error(`Failed to call User Service: ${error.message}`);

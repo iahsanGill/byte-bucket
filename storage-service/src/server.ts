@@ -4,6 +4,7 @@ import express from "express";
 import { connectDB } from "./config/database.config";
 import storageRoutes from "./routes/storage.routes";
 import bodyParser from "body-parser";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
@@ -14,12 +15,13 @@ app.use(
   cors({
     origin: "http://localhost:3000",
     credentials: true,
-    exposedHeaders: ["Authorization"],
+    exposedHeaders: ["Cookie"],
   })
 );
 
 app.use(bodyParser.json({ limit: "100mb" }));
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use("/api", storageRoutes);
 
 connectDB(process.env.DB_URL as string);

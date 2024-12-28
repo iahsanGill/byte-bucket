@@ -59,7 +59,6 @@ services:
       - user-mongo
     volumes:
       - ./user-service:/app
-      - ./shared:/shared
     networks:
       - app-network
 
@@ -74,7 +73,6 @@ services:
       - storage-mongo
     volumes:
       - ./storage-service:/app
-      - ./shared:/shared
     networks:
       - app-network
 
@@ -89,7 +87,6 @@ services:
       - usage-mongo
     volumes:
       - ./usage-monitoring-service:/app
-      - ./shared:/shared
     networks:
       - app-network
 
@@ -102,7 +99,6 @@ services:
       - ./logging-service/.env
     volumes:
       - ./logging-service:/app
-      - ./shared:/shared
     networks:
       - app-network
 

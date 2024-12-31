@@ -1,0 +1,117 @@
+services:
+  # Redis for caching
+  redis:
+    image: redis:latest
+    container_name: redis
+    networks:
+      - app-network
+
+  # MongoDB for User Account Management Service
+  user-mongo:
+    image: mongo:latest
+    container_name: user-mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=rootpassword
+    networks:
+      - app-network
+
+  # # MongoDB for Storage Management Service
+  storage-mongo:
+    image: mongo:latest
+    container_name: storage-mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=rootpassword
+    networks:
+      - app-network
+
+    # # MongoDB for User Monitoring Service
+  usage-mongo:
+    image: mongo:latest
+    container_name: usage-mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=rootpassword
+    networks:
+      - app-network
+
+  # Nginx for porxy/controller service
+  nginx:
+    image: nginx:latest
+    container_name: api-gateway
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    command: ["nginx", "-g", "daemon off;"]
+    networks:
+      - app-network
+
+  # User Account Management Service (Express app)
+  user-service:
+    build:
+      context: ./user-service
+    container_name: user-service
+    env_file:
+      - ./user-service/.env
+    depends_on:
+      - user-mongo
+    networks:
+      - app-network
+
+  # # Storage Management Service (Express app)
+  storage-service:
+    build:
+      context: ./storage-service
+    container_name: storage-service
+    env_file:
+      - ./storage-service/.env
+    depends_on:
+      - storage-mongo
+    volumes:
+      - ./storage-service:/app
+    networks:
+      - app-network
+
+  # # User Monitoring Service (Express app)
+  usage-monitoring-service:
+    build:
+      context: ./usage-monitoring-service
+    container_name: usage-monitoring-service
+    env_file:
+      - ./usage-monitoring-service/.env
+    depends_on:
+      - usage-mongo
+    volumes:
+      - ./usage-monitoring-service:/app
+    networks:
+      - app-network
+
+  # # Logging Service
+  logging-service:
+    build:
+      context: ./logging-service
+    container_name: logging-service
+    env_file:
+      - ./logging-service/.env
+    volumes:
+      - ./logging-service:/app
+    networks:
+      - app-network
+
+  # # View generator Service
+  view-generator-service:
+    build:
+      context: ./view-generator-service
+    container_name: view-generator-service
+    volumes:
+      - ./view-generator-service:/app
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

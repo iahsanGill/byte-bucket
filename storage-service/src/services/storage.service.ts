@@ -6,7 +6,13 @@ import Redis from "ioredis";
 
 const DAILY_BANDWIDTH_LIMIT = 100 * 1024 * 1024; // 100MB
 
-const redis = new Redis(process.env.REDIS_URL);
+console.log(process.env.REDIS_HOST);
+const redis = new Redis({
+  host: "redis-13156.c259.us-central1-2.gce.redns.redis-cloud.com",
+  port: 13156,
+  username: "default",
+  password: "n5Z53IY1RrldlbmVOLXHhI8OhVm3yh8T",
+});
 
 export const checkStorageLimit = async (userId: string, fileSize: number) => {
   const userStorage = await UserStorage.findOne({ userId });
@@ -50,6 +56,14 @@ export const uploadFile = async (
   video: Express.Multer.File,
   thumbnail: Express.Multer.File
 ) => {
+  const fileSize = video.size + thumbnail.size;
+
+  // Check storage limit
+  const userStorage = await checkStorageLimit(userId, fileSize);
+
+  // Check bandwidth limit
+  await checkBandwidthLimit(userId, fileSize);
+
   const videoExt = video.originalname.split(".").pop();
   const thumbnailExt = thumbnail.originalname.split(".").pop();
   const videoId = uuidv4();
@@ -76,7 +90,10 @@ export const uploadFile = async (
     }),
   ]);
 
-  logEvent("info", "Files uploaded", { userId });
+  userStorage.usedStorage += fileSize;
+  await userStorage.save();
+
+  logEvent("info", "Files uploaded", { userId, fileSize });
 };
 
 export const deleteFile = async (userId: string, videoId: string) => {
@@ -110,6 +127,9 @@ export const deleteFile = async (userId: string, videoId: string) => {
   // Get the size of the original file
   const [fileMetadata] = await file.getMetadata();
   const fileSize = fileMetadata.size as number;
+
+  // Check bandwidth limit
+  await checkBandwidthLimit(userId, fileSize);
 
   // Delete the video file and thumbnail
   await Promise.all([file.delete(), thumbnailFile.delete()]);

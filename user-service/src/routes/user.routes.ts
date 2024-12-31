@@ -23,10 +23,7 @@ router.post("/login", async (req: Request, res: Response) => {
   try {
     const token = await loginUser(email, password);
     if (token) {
-      res
-        .cookie("token", token, { httpOnly: true, secure: true })
-        .status(200)
-        .json({ message: "Login successful" });
+      res.status(200).json({ message: "Login Successful", token });
     } else {
       res.status(401).json({ error: "Invalid email or password" });
     }
@@ -36,7 +33,7 @@ router.post("/login", async (req: Request, res: Response) => {
 });
 
 router.get("/validate", (req: Request, res: Response) => {
-  const token = req.cookies.token;
+  const token = req.headers.authorization;
   try {
     if (token) {
       const user = verifyToken(token);

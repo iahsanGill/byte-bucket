@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 8080;
 
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: "*",
     credentials: true,
     exposedHeaders: ["Cookie"],
   })
@@ -22,7 +22,7 @@ app.use(
 app.use(bodyParser.json({ limit: "100mb" }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use("/api", storageRoutes);
+app.use(storageRoutes);
 
 connectDB(process.env.DB_URL as string);
 

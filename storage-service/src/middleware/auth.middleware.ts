@@ -11,8 +11,7 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-    // Extract the token from the cookies
-    const token = req.cookies.token;
+    const token = req.headers.authorization;
 
     if (!token) {
       logEvent("warn", "Unauthorized access attempt: No token provided", {
@@ -27,7 +26,7 @@ export const authenticate = async (
     try {
       response = await axios.get(`${USER_SERVICE_URL}/validate`, {
         // Pass the token as a cookie
-        headers: { Cookie: `token=${token}` },
+        headers: { Authorization: token },
       });
     } catch (error) {
       throw new Error(`Failed to call User Service: ${error.message}`);

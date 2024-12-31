@@ -132,3 +132,5 @@ dist
 # service key for gcp account
 
 video-streaming-app*.json
+
+k8s

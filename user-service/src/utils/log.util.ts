@@ -1,6 +1,12 @@
 import Redis from "ioredis";
 
-const subscriber = new Redis(process.env.REDIS_URL);
+console.log(process.env.REDIS_HOST);
+const subscriber = new Redis({
+  host: "redis-13156.c259.us-central1-2.gce.redns.redis-cloud.com",
+  port: 13156,
+  username: "default",
+  password: "n5Z53IY1RrldlbmVOLXHhI8OhVm3yh8T",
+});
 
 const logEvent = (
   level: string,

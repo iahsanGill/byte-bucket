@@ -35,7 +35,7 @@ app.use(
 app.use(bodyParser.json({ limit: "100mb" }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use("/api", userRoutes);
+app.use(userRoutes);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
